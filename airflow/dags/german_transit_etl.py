@@ -9,6 +9,7 @@ with DAG(
     start_date=pendulum.datetime(2026, 10, 22, tz="Europe/Berlin"),
     schedule=None,
     catchup=False,
+    max_active_runs=1,
     tags=["germany", "transit", "etl"],
 ) as dag:
 
@@ -72,6 +73,25 @@ with DAG(
         cwd="/opt/airflow/project",
     )
 
+    
+    transform_calendar = BashOperator(
+        task_id="transform_service_calendar",
+        bash_command="python src/transform/clean_service_calendar.py",
+        cwd="/opt/airflow/project",
+    )
+
+    load_calendar = BashOperator(
+        task_id="load_service_calendar",
+        bash_command="python src/load/load_service_dates.py",
+        cwd="/opt/airflow/project",
+    )
+
+    
+    quality_checks = BashOperator(
+        task_id="validate_gtfs_data",
+        bash_command="python src/quality/check_gtfs_quality.py",
+        cwd="/opt/airflow/project",
+    )
 
     
     extract >> transform >> load >> transform_routes >> load_routes
@@ -79,3 +99,7 @@ with DAG(
     load_routes >> transform_trips >> load_trips
 
     load_trips >> transform_stop_times >> load_stop_times
+
+    load_stop_times >> transform_calendar >> load_calendar
+
+    load_calendar >> quality_checks

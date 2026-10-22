@@ -36,8 +36,6 @@ services:
 
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-
-      # PostgreSQL connection
       TRANSIT_DB_HOST: postgres
       TRANSIT_DB_PORT: "5432"
       TRANSIT_DB_PASSWORD: local_dev_password
@@ -48,6 +46,27 @@ services:
       - ./src:/opt/airflow/project/src:ro
       - ./data:/opt/airflow/project/data
       - ./run_etl.py:/opt/airflow/project/run_etl.py:ro
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+
+    image: german-transit-dbt:local
+
+    working_dir: /usr/app
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./dbt:/usr/app
+
+    entrypoint: ["dbt"]
 
     depends_on:
       postgres:
