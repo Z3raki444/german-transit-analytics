@@ -1,0 +1,14 @@
+
+version: 2
+
+sources:
+  - name: gtfs
+    schema: public
+    description: German railway GTFS data loaded by Airflow
+
+    tables:
+      - name: stops
+      - name: routes
+      - name: trips
+      - name: stop_times
+      - name: service_dates
