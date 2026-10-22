@@ -114,5 +114,4 @@ with DAG(
     load_stop_times >> transform_calendar >> load_calendar
 
     load_calendar >> quality_checks
-
-    
+    quality_checks >> build_analytics

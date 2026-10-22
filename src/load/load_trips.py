@@ -13,7 +13,7 @@ with psycopg.connect(
     port=int(os.getenv("TRANSIT_DB_PORT", "5433")),
     dbname="transit_analytics",
     user="transit_user",
-    password=os.getenv("TRANSIT_DB_PASSWORD", "local_dev_password")
+    password=os.environ["TRANSIT_DB_PASSWORD"]
 ) as conn:
 
     with conn.cursor() as cur:

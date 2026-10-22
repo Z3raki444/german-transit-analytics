@@ -1,0 +1,28 @@
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile Python files
+        run: python -m compileall -q src dashboard airflow/dags run_etl.py tests
+
+      - name: Run offline calendar tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate Docker Compose configuration
+        env:
+          DBT_ENV_SECRET_TRANSIT_DB_PASSWORD: ci_placeholder_not_a_real_secret
+        run: docker compose config -q
