@@ -1,0 +1,35 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: german-transit-postgres
+
+    environment:
+      POSTGRES_USER: transit_user
+      POSTGRES_PASSWORD: local_dev_password
+      POSTGRES_DB: transit_analytics
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow:
+    image: apache/airflow:3.3.2
+    container_name: german-transit-airflow
+    command: standalone
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+
+volumes:
+  postgres_data:
+  airflow_data:
