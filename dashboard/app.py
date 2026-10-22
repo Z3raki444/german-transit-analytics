@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 st.title("🚆 German Transit Analytics")
-st.caption("German Railway Network | ETL Analytics Dashboard")
+st.caption("Long-distance railway timetables · scheduled departures · GTFS data")
 
 @st.cache_data(ttl=300)
 def get_summary():
@@ -104,7 +104,10 @@ if not available_dates:
     st.warning("No scheduled departure data available.")
     st.stop()
 
-selected_date = st.selectbox(
+st.sidebar.header("Explore railway schedules")
+st.sidebar.caption("Scheduled timetable data — not realtime delay data.")
+
+selected_date = st.sidebar.selectbox(
     "Select Service Date",
     available_dates,
     format_func=lambda d: d.strftime("%d %B %Y")

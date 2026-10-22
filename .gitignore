@@ -1,0 +1,33 @@
+# Environment and local credentials
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Downloaded or generated GTFS data
+data/raw/
+data/processed/
+
+# dbt local state and artifacts
+dbt/logs/
+dbt/target/
+dbt/.user.yml
+dbt/.dbt/
+
+# Local tools and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Streamlit secrets
+.streamlit/secrets.toml
+dashboard/.streamlit/secrets.toml
