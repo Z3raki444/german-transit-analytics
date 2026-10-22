@@ -94,6 +94,17 @@ with DAG(
     )
 
     
+    build_analytics = BashOperator(
+        task_id="build_analytics_models",
+        bash_command=(
+            "dbt build "
+            "--project-dir /opt/airflow/project/dbt "
+            "--profiles-dir /opt/airflow/project/dbt"
+        ),
+        cwd="/opt/airflow/project",
+    )
+
+    
     extract >> transform >> load >> transform_routes >> load_routes
 
     load_routes >> transform_trips >> load_trips
@@ -103,3 +114,5 @@ with DAG(
     load_stop_times >> transform_calendar >> load_calendar
 
     load_calendar >> quality_checks
+
+    

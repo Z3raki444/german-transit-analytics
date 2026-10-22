@@ -110,6 +110,45 @@ selected_date = st.selectbox(
     format_func=lambda d: d.strftime("%d %B %Y")
 )
 
+
+# Daily KPI Summary
+@st.cache_data(ttl=300)
+def get_daily_kpis(selected_date):
+    with connect_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    COALESCE((
+                        SELECT SUM(scheduled_departures)
+                        FROM analytics.daily_station_departures
+                        WHERE service_date = %s
+                    ), 0),
+
+                    (
+                        SELECT COUNT(*)
+                        FROM analytics.daily_station_departures
+                        WHERE service_date = %s
+                    ),
+
+                    COALESCE((
+                        SELECT SUM(scheduled_trips)
+                        FROM analytics.train_service_summary
+                        WHERE service_date = %s
+                    ), 0)
+            """, (selected_date, selected_date, selected_date))
+
+            return cur.fetchone()
+
+
+departures, stations, trips = get_daily_kpis(selected_date)
+
+kpi1, kpi2, kpi3 = st.columns(3)
+
+kpi1.metric("Scheduled Departures", f"{departures:,}")
+kpi2.metric("Active Stations", f"{stations:,}")
+kpi3.metric("Scheduled Trips", f"{trips:,}")
+
+
 top_stations = get_top_stations(selected_date)
 
 if not top_stations.empty:
@@ -307,3 +346,101 @@ if not category_data.empty:
 
 else:
     st.warning("No train category data for this date.")
+
+
+
+# ----------------------------------------
+# Interactive Railway Station Map
+# ----------------------------------------
+
+@st.cache_data(ttl=300)
+def get_station_map(selected_date):
+    with connect_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                WITH child_coordinates AS (
+                    SELECT
+                        parent_station AS station_id,
+                        AVG(stop_lat) AS latitude,
+                        AVG(stop_lon) AS longitude
+                    FROM public.stops
+                    WHERE NULLIF(parent_station, '') IS NOT NULL
+                    GROUP BY parent_station
+                )
+
+                SELECT
+                    d.station_name,
+                    d.scheduled_departures,
+                    COALESCE(s.stop_lat, c.latitude),
+                    COALESCE(s.stop_lon, c.longitude)
+
+                FROM analytics.daily_station_departures d
+
+                LEFT JOIN public.stops s
+                    ON d.station_id = s.stop_id
+
+                LEFT JOIN child_coordinates c
+                    ON d.station_id = c.station_id
+
+                WHERE d.service_date = %s
+
+                ORDER BY d.scheduled_departures DESC
+            """, (selected_date,))
+
+            rows = cur.fetchall()
+
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "Station",
+            "Scheduled Departures",
+            "Latitude",
+            "Longitude"
+        ]
+    )
+
+
+st.divider()
+st.subheader("German Railway Station Map")
+
+map_data = get_station_map(selected_date)
+
+map_data = map_data.dropna(
+    subset=["Latitude", "Longitude"]
+)
+
+if not map_data.empty:
+
+    fig_map = px.scatter_map(
+        map_data,
+        lat="Latitude",
+        lon="Longitude",
+        size="Scheduled Departures",
+        color="Scheduled Departures",
+        hover_name="Station",
+        hover_data={
+            "Latitude": False,
+            "Longitude": False,
+            "Scheduled Departures": True
+        },
+        size_max=25,
+        zoom=5,
+        center={"lat": 51.2, "lon": 10.45},
+        map_style="open-street-map",
+        height=600,
+        title="Scheduled Railway Departures by Station"
+    )
+
+    fig_map.update_layout(
+        margin=dict(l=0, r=0, t=45, b=0)
+    )
+
+    st.plotly_chart(fig_map, width="stretch")
+
+    st.caption(
+        "Marker size represents scheduled departures "
+        "on the selected GTFS service date."
+    )
+
+else:
+    st.warning("No station coordinates available for this date.")
