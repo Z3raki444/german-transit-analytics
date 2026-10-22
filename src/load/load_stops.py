@@ -9,13 +9,16 @@ if not CSV_PATH.exists():
     raise FileNotFoundError(f"Missing file: {CSV_PATH}")
 
 # Connect to PostgreSQL running in Docker
+
 with psycopg.connect(
-    host="localhost",
-    port=5433,
+    host=os.getenv("TRANSIT_DB_HOST", "127.0.0.1"),
+    port=int(os.getenv("TRANSIT_DB_PORT", "5433")),
     dbname="transit_analytics",
     user="transit_user",
     password=os.getenv("TRANSIT_DB_PASSWORD", "local_dev_password")
 ) as conn:
+
+
 
     with conn.cursor() as cur:
 

@@ -15,9 +15,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit_user -d transit_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   airflow:
-    image: apache/airflow:3.3.2
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+
+    image: german-transit-airflow:local
     container_name: german-transit-airflow
+
     command: standalone
 
     ports:
@@ -26,9 +37,21 @@ services:
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
 
+      # PostgreSQL connection
+      TRANSIT_DB_HOST: postgres
+      TRANSIT_DB_PORT: "5432"
+      TRANSIT_DB_PASSWORD: local_dev_password
+
     volumes:
       - airflow_data:/opt/airflow
       - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/project/src:ro
+      - ./data:/opt/airflow/project/data
+      - ./run_etl.py:/opt/airflow/project/run_etl.py:ro
+
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

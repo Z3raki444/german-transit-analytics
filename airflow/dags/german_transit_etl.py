@@ -1,0 +1,81 @@
+
+import pendulum
+
+from airflow.sdk import DAG
+from airflow.providers.standard.operators.bash import BashOperator
+
+with DAG(
+    dag_id="german_transit_etl",
+    start_date=pendulum.datetime(2026, 10, 22, tz="Europe/Berlin"),
+    schedule=None,
+    catchup=False,
+    tags=["germany", "transit", "etl"],
+) as dag:
+
+    extract = BashOperator(
+        task_id="extract_gtfs",
+        bash_command="python src/ingestion/extract_gtfs_static.py",
+        cwd="/opt/airflow/project",
+    )
+
+    transform = BashOperator(
+        task_id="transform_stops",
+        bash_command="python src/transform/clean_stops.py",
+        cwd="/opt/airflow/project",
+    )
+
+    load = BashOperator(
+        task_id="load_stops",
+        bash_command="python src/load/load_stops.py",
+        cwd="/opt/airflow/project",
+    )
+
+    
+    transform_routes = BashOperator(
+        task_id="transform_routes",
+        bash_command="python src/transform/clean_routes.py",
+        cwd="/opt/airflow/project",
+    )
+
+    load_routes = BashOperator(
+        task_id="load_routes",
+        bash_command="python src/load/load_routes.py",
+        cwd="/opt/airflow/project",
+    )
+
+    
+    # Transform train journeys
+    transform_trips = BashOperator(
+        task_id="transform_trips",
+        bash_command="python src/transform/clean_trips.py",
+        cwd="/opt/airflow/project",
+    )
+
+    # Load journeys into PostgreSQL
+    load_trips = BashOperator(
+        task_id="load_trips",
+        bash_command="python src/load/load_trips.py",
+        cwd="/opt/airflow/project",
+    )
+
+    # Transform arrival and departure times
+    transform_stop_times = BashOperator(
+        task_id="transform_stop_times",
+        bash_command="python src/transform/clean_stop_times.py",
+        cwd="/opt/airflow/project",
+    )
+
+    # Load arrival and departure times
+    load_stop_times = BashOperator(
+        task_id="load_stop_times",
+        bash_command="python src/load/load_stop_times.py",
+        cwd="/opt/airflow/project",
+    )
+
+
+    
+    extract >> transform >> load >> transform_routes >> load_routes
+
+    load_routes >> transform_trips >> load_trips
+
+    load_trips >> transform_stop_times >> load_stop_times
